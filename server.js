@@ -1,36 +1,31 @@
 const WebSocket = require('ws');
+const http = require('http');
 
-// Запускаем сервер на порту, который выдаст облако Render (или на 8080 по умолчанию)
-const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
+// Создаем простейший HTTP-сервер, через который сокеты гарантированно пройдут на Render
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Cosmoteer Server is Running!\n');
+});
 
-// Хранилище для сетки нашего общего корабля Cosmoteer 3D
-// Ключ: "x,y,z", Значение: тип блока (1 - броня, 2 - реактор, 3 - пушка)
+const wss = new WebSocket.Server({ server });
+
 let shipGrid = {
     "0,0,0": 3,  // Пушка на носу
-    "0,0,-1": 1, // Корпус (броня)
+    "0,0,-1": 1, // Броня
     "0,0,-2": 2  // Двигатель
 };
 
-console.log(`Сервер Cosmoteer запущен на порту ${PORT}`);
-
 wss.on('connection', (ws) => {
-    console.log('Новый игрок подключился к космосу!');
-
-    // Как только игрок зашел, сразу отправляем ему текущее состояние корабля
+    console.log('Игрок вошел в систему!');
     ws.send(JSON.stringify({ type: "initShip", grid: shipGrid }));
 
-    // Слушаем команды от игроков
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
-
-            // Если игрок нажал кнопку "Построить блок"
             if (data.type === "buildBlock") {
                 const key = `${data.x},${data.y},${data.z}`;
-                shipGrid[key] = data.blockType; // Сохраняем на сервере
+                shipGrid[key] = data.blockType;
 
-                // Рассылаем обновленный блок ВШЕМ подключенным игрокам (Широковещание)
                 const response = JSON.stringify({
                     type: "updateShip",
                     x: data.x, y: data.y, z: data.z,
@@ -44,11 +39,13 @@ wss.on('connection', (ws) => {
                 });
             }
         } catch (e) {
-            console.error("Ошибка обработки пакета:", e);
+            console.error(e);
         }
     });
+});
 
-    ws.on('close', () => {
-        console.log('Игрок отключился.');
-    });
+// Запускаем на порту, который требует Render
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Сетевой мост запущен на порту ${PORT}`);
 });
