@@ -1,0 +1,12 @@
+{
+  "name": "cosmoteer-3d-server",
+  "version": "1.0.0",
+  "description": "Сервер для 3D Cosmoteer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}const
